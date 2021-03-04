@@ -12,6 +12,7 @@ public:
     struct Params
     {
         bool bRemoveIntermediates = true;
+        bool bRemoveColorInfo = true;
         bool bCompressBg = false;
         bool bCompressFg = false;
         int iSizeBg = 0;
@@ -60,8 +61,16 @@ public:
                        const std::filesystem::path& rDarkColorFilePath = "",
                        const std::filesystem::path& rLightColorFilePath = "");
 
-    bool decompressImage(const std::filesystem::path& rDstPath,
-                         const std::filesystem::path& rCIFFilePath);
+    bool CIFToKmp(const std::filesystem::path& rDstPath,
+                  const std::filesystem::path& rCIFFilePath);
+
+    bool CIFToStr(const std::filesystem::path& rDstPath,
+                  const std::filesystem::path& rCIFFilePath);
+
+    bool CIFToImage(const std::filesystem::path& rDstPath,
+                    const std::filesystem::path& rCIFFilePath,
+                    const std::filesystem::path& rBackgroundComponentPath = "",
+                    const std::filesystem::path& rForegroundComponentPath = "");
 
     bool decompressCIF(const std::filesystem::path& rDstPath,
                        const std::filesystem::path& rCIFFilePath);
@@ -83,6 +92,13 @@ public:
                       const std::filesystem::path& rRawImageFilePath,
                       const std::filesystem::path& rBackgroundColorFilePath = "",
                       const std::filesystem::path& rForegroundColorFilePath = "");
+
+private:
+    bool prepareColorComponent(std::filesystem::path& rResultColorPath,
+                               const std::filesystem::path& rDstPath,
+                               const std::filesystem::path& rCIFFilePath,
+                               const std::filesystem::path& rColorComponentPath,
+                               const std::string& sPostfix);
 private:
     Params params_;
 };

@@ -1,7 +1,5 @@
 #include "mainwindow.h"
 
-#include <limits>
-
 #include "./ui_mainwindow.h"
 #include <QFileDialog>
 #include <QLineEdit>
@@ -19,7 +17,9 @@ MainWindow::MainWindow(QWidget *parent)
     pUi->fg_size_text_line->setEnabled(false);
     pUi->color_group->setEnabled(false);
 
-    pColorSizeValidator = new QIntValidator(0, std::numeric_limits<int>::max(), this);
+    pColorSizeValidator = new QIntValidator(this);
+    constexpr int iMinimalColorFileSize = 28;
+    pColorSizeValidator->setBottom(iMinimalColorFileSize);
     pUi->bg_size_text_line->setValidator(pColorSizeValidator);
     pUi->fg_size_text_line->setValidator(pColorSizeValidator);
 }
@@ -53,9 +53,7 @@ QString MainWindow::getInputForDecompression()
 {
     QString sFileName = QFileDialog::getOpenFileName(
         this, tr("Выберите файл для восстановления"), "",
-        tr("CIF файлы (*.CIF);;"
-        "KMP файлы (*.kmp);;"
-        "STR файлы (*.str)"));
+        tr("CIF файлы (*.CIF)"));
     return sFileName;
 }
 
@@ -63,7 +61,9 @@ QString MainWindow::getOutputForDecompression()
 {
     QString sFileName = QFileDialog::getSaveFileName(
         this, tr("Выберите выходное изображение"), "",
-        tr("Изображения (*.tif *tiff *.png *.jpg *jpeg *.bmp)"));
+        tr("Изображения (*.tif *tiff *.png *.jpg *jpeg *.bmp);;"
+        "KMP файлы (*.kmr);;"
+        "STR файлы (*.str)"));
     return sFileName;
 }
 
@@ -78,6 +78,8 @@ void MainWindow::on_choose_input_file_triggered()
         {
             pTextLine->setText(sInputFileName);
         }
+        int iFileSize = fs::file_size(sInputFileName.toStdString());
+        pColorSizeValidator->setTop(iFileSize);
     }
     else if (pCurrentTab == pUi->decompression_tab)
     {
@@ -110,6 +112,34 @@ void MainWindow::on_choose_output_file_triggered()
         {
             pTextLine->setText(sOutputFileName);
         }
+    }
+}
+
+QString MainWindow::getColorForDecompression()
+{
+    QString sFileName = QFileDialog::getOpenFileName(
+        this, tr("Выберите файл, содержащий информацию о цвете"), "",
+        tr("Изображения (*.tif *tiff *.png *.jpg *jpeg *.bmp)"));
+    return sFileName;
+}
+
+void MainWindow::on_choose_bg_color_file_triggered()
+{
+    QString sColorFileName = getColorForDecompression();
+    QLineEdit* pTextLine = pUi->decompression_tab->findChild<QLineEdit*>("decompression_bg_color_text_line");
+    if (pTextLine)
+    {
+        pTextLine->setText(sColorFileName);
+    }
+}
+
+void MainWindow::on_choose_fg_color_file_triggered()
+{
+    QString sColorFileName = getColorForDecompression();
+    QLineEdit* pTextLine = pUi->decompression_tab->findChild<QLineEdit*>("decompression_fg_color_text_line");
+    if (pTextLine)
+    {
+        pTextLine->setText(sColorFileName);
     }
 }
 
@@ -211,4 +241,59 @@ void MainWindow::on_compress_button_clicked()
         }
     }
     pUi->statusbar->showMessage("Сжатие успешно завершено");
+}
+
+void MainWindow::on_decompress_button_clicked()
+{
+    fs::path inputCIFPath(pUi->decompression_input_text_line->text().toStdString());
+    fs::path outputFilePath(pUi->decompression_output_text_line->text().toStdString());
+
+    pUi->statusbar->showMessage("Выполняется восстановление");
+    const auto outputFileExtension = outputFilePath.extension();
+    if (outputFileExtension == ".kmr")
+    {
+        if (cifCodec_.CIFToKmp(outputFilePath, inputCIFPath) == false)
+        {
+            pUi->statusbar->showMessage("Произошла ошибка при восстановлении KMP файла");
+            return;
+        }
+    }
+    else if (outputFileExtension == ".str")
+    {
+        if (cifCodec_.CIFToStr(outputFilePath, inputCIFPath) == false)
+        {
+            pUi->statusbar->showMessage("Произошла ошибка при восстановлении STR файла");
+            return;
+        }
+    }
+    else
+    {
+        auto& rParams = cifCodec_.getParams();
+        rParams.bRemoveColorInfo = true;
+        fs::path backgroundColorPath(pUi->decompression_bg_color_text_line->text().toStdString());
+        if (fs::exists(backgroundColorPath))
+        {
+            rParams.bRemoveColorInfo = false;
+        }
+        else
+        {
+            backgroundColorPath = "";
+        }
+        fs::path foregroundColorPath(pUi->decompression_fg_color_text_line->text().toStdString());
+        if (fs::exists(foregroundColorPath))
+        {
+            rParams.bRemoveColorInfo = false;
+        }
+        else
+        {
+            foregroundColorPath = "";
+        }
+        if (cifCodec_.CIFToImage(outputFilePath, inputCIFPath,
+                                 backgroundColorPath, foregroundColorPath) == false)
+        {
+            pUi->statusbar->showMessage("Произошла ошибка при восстановлении изображения");
+            return;
+        }
+    }
+    pUi->statusbar->showMessage("Восстановление успешно завершено");
 }

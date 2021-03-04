@@ -213,7 +213,14 @@ bool CIFCodec::extractColor(const std::filesystem::path& rImageFilePath,
         return false;
     }
 
-    return true;
+    if (fs::exists(rDstDarkComponentPath) && fs::exists(rDstLightComponentPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::compressColor(const std::filesystem::path& rDstPath,
@@ -259,7 +266,14 @@ bool CIFCodec::compressColor(const std::filesystem::path& rDstPath,
         }
     }
 
-    return true;
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::extractStr(const std::filesystem::path& rDstPath,
@@ -317,7 +331,14 @@ bool CIFCodec::extractStr(const std::filesystem::path& rDstPath,
     outputFilePath.replace_extension(".str");
     fs::rename(outputFilePath, rDstPath);
 
-    return true;
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::compressStr(const std::filesystem::path& rDstPath, const std::filesystem::path& rStrFilePath)
@@ -350,7 +371,14 @@ bool CIFCodec::compressStr(const std::filesystem::path& rDstPath, const std::fil
         }
     }
 
-    return true;
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::compressKmp(const fs::path& rDstPath, const fs::path& rKmpFilePath, const fs::path& rEtlFilePath)
@@ -414,7 +442,19 @@ bool CIFCodec::compressKmp(const fs::path& rDstPath, const fs::path& rKmpFilePat
         }
     }
 
-    return fs::remove_all(temporaryFolderAbs) > 0 ? true : false;
+    if (fs::remove_all(temporaryFolderAbs) == 0)
+    {
+        return false;
+    }
+
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::compressFinal(const fs::path& rDstPath,
@@ -431,16 +471,40 @@ bool CIFCodec::compressFinal(const fs::path& rDstPath,
         return false;
     }
 
+    if (fs::exists(rDstPath))
+    {
+        fs::remove(rDstPath);
+    }
     std::wstring wsCmd = L"7z.exe a " + rDstPath.wstring()
             + L" " + rBdsFilePath.wstring()
             + L" " + rEtlFilePath.wstring();
     if (fs::exists(rDarkColorFilePath))
     {
-        wsCmd += L" " + rDarkColorFilePath.wstring();
+        if (fs::file_size(rDarkColorFilePath) > 0)
+        {
+            wsCmd += L" " + rDarkColorFilePath.wstring();
+        }
+        else
+        {
+            if (fs::remove(rDarkColorFilePath) == false)
+            {
+                return false;
+            }
+        }
     }
     if (fs::exists(rLightColorFilePath))
     {
-        wsCmd += L" " + rLightColorFilePath.wstring();
+        if (fs::file_size(rLightColorFilePath) > 0)
+        {
+            wsCmd += L" " + rLightColorFilePath.wstring();
+        }
+        else
+        {
+            if (fs::remove(rLightColorFilePath) == false)
+            {
+                return false;
+            }
+        }
     }
     if (executeCommand(wsCmd) == false)
     {
@@ -473,62 +537,30 @@ bool CIFCodec::compressFinal(const fs::path& rDstPath,
         }
     }
 
-    return true;
-}
-
-bool CIFCodec::decompressImage(const fs::path& rDstPath,
-                               const fs::path& rCIFFilePath)
-{
-    if (rDstPath.empty()
-        || (rCIFFilePath.extension() != ".CIF")
-        || !fs::exists(rCIFFilePath))
+    if (fs::exists(rDstPath))
     {
-        MV_CLOGD("Incorrect input parameters for image decompession:");
-        MV_CLOGD(rDstPath);
-        MV_CLOGD(rCIFFilePath);
+        return true;
+    }
+    else
+    {
         return false;
     }
-    fs::path outputFolderPath = rDstPath.parent_path();
-    if (decompressCIF(outputFolderPath,
+}
+
+bool CIFCodec::CIFToKmp(const fs::path &rDstPath, const fs::path &rCIFFilePath)
+{
+    if (decompressCIF(rDstPath.parent_path(),
                       rCIFFilePath) == false)
     {
         return false;
     }
 
-    fs::path outputDarkComponentPath;
-    fs::path outputLightComponentPath;
-    if (true)
     {
-        const fs::path inputFilePath = outputFolderPath / rCIFFilePath.stem();
-        fs::path inputComponentPath = inputFilePath;
-        inputComponentPath.concat("_dark.Ti");
-        outputDarkComponentPath = inputComponentPath;
-        outputDarkComponentPath.replace_extension(".bmp");
-        if (restoreColor(outputDarkComponentPath,
-                         inputComponentPath) == false)
-        {
-            return false;
-        }
-        inputComponentPath = inputFilePath;
-        inputComponentPath.concat("_light.Ti");
-        outputLightComponentPath = inputComponentPath;
-        outputLightComponentPath.replace_extension(".bmp");
-        if (restoreColor(outputLightComponentPath,
-                         inputComponentPath) == false)
-        {
-            return false;
-        }
-    }
-
-    fs::path inputFilePath = rCIFFilePath;
-    fs::path outputFilePath = rDstPath;
-    outputFilePath.replace_extension(".kmr");
-    {
-        fs::path bdsFilePath = inputFilePath;
+        fs::path bdsFilePath = rCIFFilePath;
         bdsFilePath.replace_extension(".bds");
-        fs::path etlFilePath = inputFilePath;
+        fs::path etlFilePath = rCIFFilePath;
         etlFilePath.replace_extension(".etl");
-        if (restoreKmp(outputFilePath,
+        if (restoreKmp(rDstPath,
                        bdsFilePath,
                        etlFilePath) == false)
         {
@@ -536,15 +568,40 @@ bool CIFCodec::decompressImage(const fs::path& rDstPath,
         }
     }
 
-    inputFilePath = outputFilePath;
-    outputFilePath.replace_extension(".str");
-    if (restoreStr(outputFilePath,
-                   inputFilePath) == false)
+    return true;
+}
+
+bool CIFCodec::CIFToStr(const fs::path &rDstPath, const fs::path &rCIFFilePath)
+{
+    fs::path outputFilePath = rDstPath;
+    outputFilePath.replace_extension(".kmr");
+    if (CIFToKmp(outputFilePath, rCIFFilePath) == false)
     {
         return false;
     }
 
-    inputFilePath = outputFilePath;
+    if (restoreStr(rDstPath,
+                   outputFilePath) == false)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool CIFCodec::CIFToImage(const fs::path &rDstPath,
+                          const fs::path &rCIFFilePath,
+                          const fs::path& rBackgroundComponentPath,
+                          const fs::path& rForegroundComponentPath)
+{
+    fs::path outputFilePath = rDstPath;
+    outputFilePath.replace_extension(".str");
+    if (CIFToStr(outputFilePath, rCIFFilePath) == false)
+    {
+        return false;
+    }
+
+    fs::path inputFilePath = outputFilePath;
     outputFilePath.replace_extension(".raw");
     if (restoreRaw(outputFilePath,
                    inputFilePath) == false)
@@ -552,9 +609,19 @@ bool CIFCodec::decompressImage(const fs::path& rDstPath,
         return false;
     }
 
-    // TODO: add choice of color
-    const fs::path& backgroundColorPath = outputLightComponentPath;
-    const fs::path& foregroundColorPath = outputDarkComponentPath;
+    fs::path backgroundColorPath;
+    if (prepareColorComponent(backgroundColorPath, rDstPath, rCIFFilePath,
+                              rBackgroundComponentPath, "_light.Ti") == false)
+    {
+        return false;
+    }
+    fs::path foregroundColorPath;
+    if (prepareColorComponent(foregroundColorPath, rDstPath, rCIFFilePath,
+                              rForegroundComponentPath, "_dark.Ti") == false)
+    {
+        return false;
+    }
+
     if (restoreImage(rDstPath,
                      outputFilePath,
                      backgroundColorPath,
@@ -563,6 +630,41 @@ bool CIFCodec::decompressImage(const fs::path& rDstPath,
         return false;
     }
 
+    return true;
+}
+
+bool CIFCodec::prepareColorComponent(fs::path& rResultColorPath,
+                                     const fs::path& rDstPath,
+                                     const fs::path& rCIFFilePath,
+                                     const fs::path& rColorComponentPath,
+                                     const std::string& sPostfix)
+{
+    rResultColorPath = rColorComponentPath;
+    fs::path inputComponentPath = rDstPath.parent_path() / rCIFFilePath.stem();
+    inputComponentPath.concat(sPostfix);
+    if (fs::exists(rColorComponentPath))
+    {
+        if (fs::exists(inputComponentPath))
+        {
+            if (fs::remove(inputComponentPath) == false)
+            {
+                return false;
+            }
+        }
+    }
+    else
+    {
+        if (fs::exists(inputComponentPath))
+        {
+            rResultColorPath = inputComponentPath;
+            rResultColorPath.replace_extension(".bmp");
+            if (restoreColor(rResultColorPath,
+                             inputComponentPath) == false)
+            {
+                return false;
+            }
+        }
+    }
     return true;
 }
 
@@ -580,7 +682,7 @@ bool CIFCodec::decompressCIF(const fs::path& rDstPath, const fs::path& rCIFFileP
     }
 
     std::wstring wsCmd = L"7z.exe e " + rCIFFilePath.wstring()
-            + L" -o" + rDstPath.wstring();
+            + L" -o" + rDstPath.wstring() + L" -aoa";
     if (executeCommand(wsCmd) == false)
     {
         return false;
@@ -615,7 +717,14 @@ bool CIFCodec::restoreColor(const fs::path& rDstPath, const fs::path& rTiColorFi
         }
     }
 
-    return true;
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::restoreKmp(const fs::path& rDstPath,
@@ -628,7 +737,7 @@ bool CIFCodec::restoreKmp(const fs::path& rDstPath,
         || (rEtlFilePath.extension() != ".etl")
         || !fs::exists(rEtlFilePath))
     {
-        MV_CLOGD("Incorrect input parameters:");
+        MV_CLOGD("Incorrect input parameters for Kmp restoration:");
         MV_CLOGD(rDstPath);
         MV_CLOGD(rBdsFilePath);
         MV_CLOGD(rEtlFilePath);
@@ -667,7 +776,19 @@ bool CIFCodec::restoreKmp(const fs::path& rDstPath,
         }
     }
 
-    return fs::remove_all(temporaryFolderAbs) > 0 ? true : false;
+    if (fs::remove_all(temporaryFolderAbs) == 0)
+    {
+        return false;
+    }
+
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::restoreStr(const fs::path& rDstPath, const fs::path& rKmrFilePath)
@@ -676,7 +797,7 @@ bool CIFCodec::restoreStr(const fs::path& rDstPath, const fs::path& rKmrFilePath
         || (rKmrFilePath.extension() != ".kmr")
         || !fs::exists(rKmrFilePath))
     {
-        MV_CLOGD("Incorrect input parameters:");
+        MV_CLOGD("Incorrect input parameters for STR restoration:");
         MV_CLOGD(rDstPath);
         MV_CLOGD(rKmrFilePath);
         return false;
@@ -701,7 +822,14 @@ bool CIFCodec::restoreStr(const fs::path& rDstPath, const fs::path& rKmrFilePath
         }
     }
 
-    return true;
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::restoreRaw(const fs::path& rDstPath, const fs::path& rStrFilePath)
@@ -742,7 +870,19 @@ bool CIFCodec::restoreRaw(const fs::path& rDstPath, const fs::path& rStrFilePath
         }
     }
 
-    return fs::remove_all(temporaryFolderAbs) > 0 ? true : false;
+    if (fs::remove_all(temporaryFolderAbs) == 0)
+    {
+        return false;
+    }
+
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool CIFCodec::restoreImage(const fs::path& rDstPath,
@@ -764,9 +904,23 @@ bool CIFCodec::restoreImage(const fs::path& rDstPath,
 
     std::wstring wsCmd = L"RestoreImage.exe "
             + rDstPath.wstring() + L" "
-            + rRawImageFilePath.wstring() + L" "
-            + rBackgroundColorFilePath.wstring() + L" "
-            + rForegroundColorFilePath.wstring();
+            + rRawImageFilePath.wstring();
+    if (rBackgroundColorFilePath.empty())
+    {
+        wsCmd += L" \"\"";
+    }
+    else
+    {
+        wsCmd += L" " + rBackgroundColorFilePath.wstring();
+    }
+    if (rForegroundColorFilePath.empty())
+    {
+        wsCmd += L" \"\"";
+    }
+    else
+    {
+        wsCmd += L" " + rForegroundColorFilePath.wstring();
+    }
     if (executeCommand(wsCmd) == false)
     {
         return false;
@@ -778,15 +932,31 @@ bool CIFCodec::restoreImage(const fs::path& rDstPath,
         {
             return false;
         }
-        if (fs::remove(rBackgroundColorFilePath) == false)
+        if (params_.bRemoveColorInfo)
         {
-            return false;
-        }
-        if (fs::remove(rForegroundColorFilePath) == false)
-        {
-            return false;
+            if (fs::exists(rBackgroundColorFilePath))
+            {
+                if (fs::remove(rBackgroundColorFilePath) == false)
+                {
+                    return false;
+                }
+            }
+            if (fs::exists(rForegroundColorFilePath))
+            {
+                if (fs::remove(rForegroundColorFilePath) == false)
+                {
+                    return false;
+                }
+            }
         }
     }
 
-    return true;
+    if (fs::exists(rDstPath))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }

@@ -317,6 +317,34 @@
              </property>
             </widget>
            </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="decompression_bg_color_label">
+             <property name="text">
+              <string>Файл цвета фона (необязательно)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="decompression_bg_color_text_line">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="decompression_fg_color_label">
+             <property name="text">
+              <string>Файл цвета переднего плана (необязательно)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="decompression_fg_color_text_line">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
@@ -367,6 +395,8 @@
     </property>
     <addaction name="choose_input_file"/>
     <addaction name="choose_output_file"/>
+    <addaction name="choose_bg_color_file"/>
+    <addaction name="choose_fg_color_file"/>
    </widget>
    <addaction name="menu"/>
   </widget>
@@ -382,6 +412,16 @@
   <action name="choose_output_file">
    <property name="text">
     <string>Выбрать выходной файл</string>
+   </property>
+  </action>
+  <action name="choose_bg_color_file">
+   <property name="text">
+    <string>Выбрать файл цвета фона</string>
+   </property>
+  </action>
+  <action name="choose_fg_color_file">
+   <property name="text">
+    <string>Выбрать файл цвета переднего плана</string>
    </property>
   </action>
  </widget>

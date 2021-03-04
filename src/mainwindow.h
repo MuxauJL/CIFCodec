@@ -23,6 +23,7 @@ private:
     QString getOutputForCompression();
     QString getInputForDecompression();
     QString getOutputForDecompression();
+    QString getColorForDecompression();
 
 private slots:
 
@@ -37,6 +38,12 @@ private slots:
     void on_fg_check_box_stateChanged(int arg1);
 
     void on_compress_button_clicked();
+
+    void on_decompress_button_clicked();
+
+    void on_choose_bg_color_file_triggered();
+
+    void on_choose_fg_color_file_triggered();
 
 private:
     Ui::MainWindow *pUi;
