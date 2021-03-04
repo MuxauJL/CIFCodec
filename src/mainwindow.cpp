@@ -73,21 +73,27 @@ void MainWindow::on_choose_input_file_triggered()
     if (pCurrentTab == pUi->compression_tab)
     {
         QString sInputFileName = getInputForCompression();
-        QLineEdit* pTextLine = pCurrentTab->findChild<QLineEdit*>("compression_input_text_line");
-        if (pTextLine)
+        if (!sInputFileName.isEmpty())
         {
-            pTextLine->setText(sInputFileName);
+            QLineEdit* pTextLine = pCurrentTab->findChild<QLineEdit*>("compression_input_text_line");
+            if (pTextLine)
+            {
+                pTextLine->setText(sInputFileName);
+            }
+            int iFileSize = fs::file_size(sInputFileName.toStdWString());
+            pColorSizeValidator->setTop(iFileSize);
         }
-        int iFileSize = fs::file_size(sInputFileName.toStdString());
-        pColorSizeValidator->setTop(iFileSize);
     }
     else if (pCurrentTab == pUi->decompression_tab)
     {
         QString sInputFileName = getInputForDecompression();
-        QLineEdit* pTextLine = pCurrentTab->findChild<QLineEdit*>("decompression_input_text_line");
-        if (pTextLine)
+        if (!sInputFileName.isEmpty())
         {
-            pTextLine->setText(sInputFileName);
+            QLineEdit* pTextLine = pCurrentTab->findChild<QLineEdit*>("decompression_input_text_line");
+            if (pTextLine)
+            {
+                pTextLine->setText(sInputFileName);
+            }
         }
     }
 }
@@ -181,8 +187,8 @@ void MainWindow::on_fg_check_box_stateChanged(int iState)
 
 void MainWindow::on_compress_button_clicked()
 {
-    fs::path inputFilePath(pUi->compression_input_text_line->text().toStdString());
-    fs::path outputCIFPath(pUi->compression_output_text_line->text().toStdString());
+    fs::path inputFilePath(pUi->compression_input_text_line->text().toStdWString());
+    fs::path outputCIFPath(pUi->compression_output_text_line->text().toStdWString());
     auto& rParams = cifCodec_.getParams();
     if (pUi->color_check_box->isChecked())
     {
@@ -245,8 +251,8 @@ void MainWindow::on_compress_button_clicked()
 
 void MainWindow::on_decompress_button_clicked()
 {
-    fs::path inputCIFPath(pUi->decompression_input_text_line->text().toStdString());
-    fs::path outputFilePath(pUi->decompression_output_text_line->text().toStdString());
+    fs::path inputCIFPath(pUi->decompression_input_text_line->text().toStdWString());
+    fs::path outputFilePath(pUi->decompression_output_text_line->text().toStdWString());
 
     pUi->statusbar->showMessage("Выполняется восстановление");
     const auto outputFileExtension = outputFilePath.extension();
@@ -270,7 +276,7 @@ void MainWindow::on_decompress_button_clicked()
     {
         auto& rParams = cifCodec_.getParams();
         rParams.bRemoveColorInfo = true;
-        fs::path backgroundColorPath(pUi->decompression_bg_color_text_line->text().toStdString());
+        fs::path backgroundColorPath(pUi->decompression_bg_color_text_line->text().toStdWString());
         if (fs::exists(backgroundColorPath))
         {
             rParams.bRemoveColorInfo = false;
@@ -279,7 +285,7 @@ void MainWindow::on_decompress_button_clicked()
         {
             backgroundColorPath = "";
         }
-        fs::path foregroundColorPath(pUi->decompression_fg_color_text_line->text().toStdString());
+        fs::path foregroundColorPath(pUi->decompression_fg_color_text_line->text().toStdWString());
         if (fs::exists(foregroundColorPath))
         {
             rParams.bRemoveColorInfo = false;
