@@ -34,7 +34,7 @@ set(PROJECT_SOURCES
 
 set(executable_name CIFCodec)
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(${executable_name}
+    qt_add_executable(${executable_name} WIN32
         ${PROJECT_SOURCES}
     )
 endif()

@@ -902,6 +902,11 @@ bool CIFCodec::restoreImage(const fs::path& rDstPath,
         return false;
     }
 
+    if (fs::exists(rDstPath))
+    {
+        fs::remove(rDstPath);
+    }
+
     std::wstring wsCmd = L"RestoreImage.exe "
             + rDstPath.wstring() + L" "
             + rRawImageFilePath.wstring();
